@@ -1,0 +1,5 @@
+dataset: imagenet
+paths:
+  root: /users/jamullik/scratch/imagenet
+  train: /users/jamullik/scratch/imagenet/train
+  val: /users/jamullik/scratch/imagenet/val

@@ -278,6 +278,7 @@ class StableDiffusionXLPipeline(
         self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1) if getattr(self, "vae", None) else 8
         self.image_processor = VaeImageProcessor(vae_scale_factor=self.vae_scale_factor)
 
+
         self.default_sample_size = (
             self.unet.config.sample_size
             if hasattr(self, "unet") and self.unet is not None and hasattr(self.unet.config, "sample_size")
@@ -288,6 +289,7 @@ class StableDiffusionXLPipeline(
 
 
         self.watermark = None
+
 
     def encode_prompt(
         self,
@@ -1150,6 +1152,8 @@ class StableDiffusionXLPipeline(
         else:
             activation_cache = None
 
+        print(timesteps)
+
         # 7. Prepare added time ids & embeddings
         add_text_embeds = pooled_prompt_embeds
         if self.text_encoder_2 is None:
@@ -1226,7 +1230,7 @@ class StableDiffusionXLPipeline(
                 if self.interrupt:
                     continue
 
-                activation_cache.set_timestep(t)
+                if activation_cache: activation_cache.set_timestep(t)
 
                 # expand the latents if we are doing classifier free guidance
                 latent_model_input = torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents

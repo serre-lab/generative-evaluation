@@ -1,0 +1,20 @@
+model: sdxl
+hf-name: stabilityai/stable-diffusion-xl-base-1.0
+full-name: Stable Diffusion XL Base
+modality: image
+architecture: unet
+default-prompt: "A high-quality photograph."
+image-size:
+  height: 1024
+  width: 1024
+center-crop: true
+normalize:
+  mean: [0.5]
+  std: [0.5]
+probing:
+  layers:
+    - down_blocks.2.attentions.0.transformer_blocks.9.attn1.to_q
+    - down_blocks.2.attentions.0.transformer_blocks.9.attn1.to_k
+    - down_blocks.2.attentions.0.transformer_blocks.9.attn1.to_v
+  timesteps: 3
+  t_max: 500

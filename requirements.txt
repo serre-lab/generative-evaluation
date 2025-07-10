@@ -1,0 +1,6 @@
+diffusers
+torch
+torchvision
+matplotlib
+scipy
+tqdm

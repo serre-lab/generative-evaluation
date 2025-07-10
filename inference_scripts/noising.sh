@@ -4,12 +4,11 @@
 #SBATCH --gres=gpu:1
 #SBATCH -N 1
 #SBATCH -n 2
-#SBATCH --mem=60g
+#SBATCH --mem=20g
 #SBATCH -o logs/inference_%A_%a.out
 #SBATCH -e logs/inference_%A_%a.err
-#SBATCH -t 48:00:00
+#SBATCH -t 2:00:00
 
-module load cuda cudnn
 export PYTHONPATH=/users/jamullik/scratch/generative-evaluation:$PYTHONPATH
 export HF_HOME=/users/jamullik/scratch/.cache/huggingface/hub
-python inference_scripts/sdxl_inference.py
+python imagenet_noising.py --model sdxl --dataset imagenet
