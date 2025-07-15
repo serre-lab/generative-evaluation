@@ -117,9 +117,13 @@ def retrieve_timesteps(
         second element is the number of inference steps.
     """
     if timesteps is not None and sigmas is not None:
-        raise ValueError("Only one of `timesteps` or `sigmas` can be passed. Please choose one to set custom values")
+        raise ValueError(
+            "Only one of `timesteps` or `sigmas` can be passed. Please choose one to set custom values"
+        )
     if timesteps is not None:
-        accepts_timesteps = "timesteps" in set(inspect.signature(scheduler.set_timesteps).parameters.keys())
+        accepts_timesteps = "timesteps" in set(
+            inspect.signature(scheduler.set_timesteps).parameters.keys()
+        )
         if not accepts_timesteps:
             raise ValueError(
                 f"The current scheduler class {scheduler.__class__}'s `set_timesteps` does not support custom"
@@ -129,7 +133,9 @@ def retrieve_timesteps(
         timesteps = scheduler.timesteps
         num_inference_steps = len(timesteps)
     elif sigmas is not None:
-        accept_sigmas = "sigmas" in set(inspect.signature(scheduler.set_timesteps).parameters.keys())
+        accept_sigmas = "sigmas" in set(
+            inspect.signature(scheduler.set_timesteps).parameters.keys()
+        )
         if not accept_sigmas:
             raise ValueError(
                 f"The current scheduler class {scheduler.__class__}'s `set_timesteps` does not support custom"
@@ -162,12 +168,16 @@ def rescale_noise_cfg(noise_cfg, noise_pred_text, guidance_rescale=0.0):
     Returns:
         noise_cfg (`torch.Tensor`): The rescaled noise prediction tensor.
     """
-    std_text = noise_pred_text.std(dim=list(range(1, noise_pred_text.ndim)), keepdim=True)
+    std_text = noise_pred_text.std(
+        dim=list(range(1, noise_pred_text.ndim)), keepdim=True
+    )
     std_cfg = noise_cfg.std(dim=list(range(1, noise_cfg.ndim)), keepdim=True)
     # rescale the results from guidance (fixes overexposure)
     noise_pred_rescaled = noise_cfg * (std_text / std_cfg)
     # mix with the original results from guidance by factor guidance_rescale to avoid "plain looking" images
-    noise_cfg = guidance_rescale * noise_pred_rescaled + (1 - guidance_rescale) * noise_cfg
+    noise_cfg = (
+        guidance_rescale * noise_pred_rescaled + (1 - guidance_rescale) * noise_cfg
+    )
     return noise_cfg
 
 
@@ -223,21 +233,33 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
         self.caching_timestep_interval = caching_timestep_interval
 
         self.vae_spatial_compression_ratio = (
-            self.vae.spatial_compression_ratio if getattr(self, "vae", None) is not None else 32
+            self.vae.spatial_compression_ratio
+            if getattr(self, "vae", None) is not None
+            else 32
         )
         self.vae_temporal_compression_ratio = (
-            self.vae.temporal_compression_ratio if getattr(self, "vae", None) is not None else 8
+            self.vae.temporal_compression_ratio
+            if getattr(self, "vae", None) is not None
+            else 8
         )
         self.transformer_spatial_patch_size = (
-            self.transformer.config.patch_size if getattr(self, "transformer", None) is not None else 1
+            self.transformer.config.patch_size
+            if getattr(self, "transformer", None) is not None
+            else 1
         )
         self.transformer_temporal_patch_size = (
-            self.transformer.config.patch_size_t if getattr(self, "transformer") is not None else 1
+            self.transformer.config.patch_size_t
+            if getattr(self, "transformer") is not None
+            else 1
         )
 
-        self.video_processor = VideoProcessor(vae_scale_factor=self.vae_spatial_compression_ratio)
+        self.video_processor = VideoProcessor(
+            vae_scale_factor=self.vae_spatial_compression_ratio
+        )
         self.tokenizer_max_length = (
-            self.tokenizer.model_max_length if getattr(self, "tokenizer", None) is not None else 128
+            self.tokenizer.model_max_length
+            if getattr(self, "tokenizer", None) is not None
+            else 128
         )
 
     def _get_t5_prompt_embeds(
@@ -266,10 +288,16 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
         prompt_attention_mask = text_inputs.attention_mask
         prompt_attention_mask = prompt_attention_mask.bool().to(device)
 
-        untruncated_ids = self.tokenizer(prompt, padding="longest", return_tensors="pt").input_ids
+        untruncated_ids = self.tokenizer(
+            prompt, padding="longest", return_tensors="pt"
+        ).input_ids
 
-        if untruncated_ids.shape[-1] >= text_input_ids.shape[-1] and not torch.equal(text_input_ids, untruncated_ids):
-            removed_text = self.tokenizer.batch_decode(untruncated_ids[:, max_sequence_length - 1 : -1])
+        if untruncated_ids.shape[-1] >= text_input_ids.shape[-1] and not torch.equal(
+            text_input_ids, untruncated_ids
+        ):
+            removed_text = self.tokenizer.batch_decode(
+                untruncated_ids[:, max_sequence_length - 1 : -1]
+            )
             logger.warning(
                 "The following part of your input was truncated because `max_sequence_length` is set to "
                 f" {max_sequence_length} tokens: {removed_text}"
@@ -281,7 +309,9 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
         # duplicate text embeddings for each generation per prompt, using mps friendly method
         _, seq_len, _ = prompt_embeds.shape
         prompt_embeds = prompt_embeds.repeat(1, num_videos_per_prompt, 1)
-        prompt_embeds = prompt_embeds.view(batch_size * num_videos_per_prompt, seq_len, -1)
+        prompt_embeds = prompt_embeds.view(
+            batch_size * num_videos_per_prompt, seq_len, -1
+        )
 
         prompt_attention_mask = prompt_attention_mask.view(batch_size, -1)
         prompt_attention_mask = prompt_attention_mask.repeat(num_videos_per_prompt, 1)
@@ -348,7 +378,11 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
 
         if do_classifier_free_guidance and negative_prompt_embeds is None:
             negative_prompt = negative_prompt or ""
-            negative_prompt = batch_size * [negative_prompt] if isinstance(negative_prompt, str) else negative_prompt
+            negative_prompt = (
+                batch_size * [negative_prompt]
+                if isinstance(negative_prompt, str)
+                else negative_prompt
+            )
 
             if prompt is not None and type(prompt) is not type(negative_prompt):
                 raise TypeError(
@@ -362,15 +396,22 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
                     " the batch size of `prompt`."
                 )
 
-            negative_prompt_embeds, negative_prompt_attention_mask = self._get_t5_prompt_embeds(
-                prompt=negative_prompt,
-                num_videos_per_prompt=num_videos_per_prompt,
-                max_sequence_length=max_sequence_length,
-                device=device,
-                dtype=dtype,
+            negative_prompt_embeds, negative_prompt_attention_mask = (
+                self._get_t5_prompt_embeds(
+                    prompt=negative_prompt,
+                    num_videos_per_prompt=num_videos_per_prompt,
+                    max_sequence_length=max_sequence_length,
+                    device=device,
+                    dtype=dtype,
+                )
             )
 
-        return prompt_embeds, prompt_attention_mask, negative_prompt_embeds, negative_prompt_attention_mask
+        return (
+            prompt_embeds,
+            prompt_attention_mask,
+            negative_prompt_embeds,
+            negative_prompt_attention_mask,
+        )
 
     def check_inputs(
         self,
@@ -384,10 +425,13 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
         negative_prompt_attention_mask=None,
     ):
         if height % 32 != 0 or width % 32 != 0:
-            raise ValueError(f"`height` and `width` have to be divisible by 32 but are {height} and {width}.")
+            raise ValueError(
+                f"`height` and `width` have to be divisible by 32 but are {height} and {width}."
+            )
 
         if callback_on_step_end_tensor_inputs is not None and not all(
-            k in self._callback_tensor_inputs for k in callback_on_step_end_tensor_inputs
+            k in self._callback_tensor_inputs
+            for k in callback_on_step_end_tensor_inputs
         ):
             raise ValueError(
                 f"`callback_on_step_end_tensor_inputs` has to be in {self._callback_tensor_inputs}, but found {[k for k in callback_on_step_end_tensor_inputs if k not in self._callback_tensor_inputs]}"
@@ -402,14 +446,25 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
             raise ValueError(
                 "Provide either `prompt` or `prompt_embeds`. Cannot leave both `prompt` and `prompt_embeds` undefined."
             )
-        elif prompt is not None and (not isinstance(prompt, str) and not isinstance(prompt, list)):
-            raise ValueError(f"`prompt` has to be of type `str` or `list` but is {type(prompt)}")
+        elif prompt is not None and (
+            not isinstance(prompt, str) and not isinstance(prompt, list)
+        ):
+            raise ValueError(
+                f"`prompt` has to be of type `str` or `list` but is {type(prompt)}"
+            )
 
         if prompt_embeds is not None and prompt_attention_mask is None:
-            raise ValueError("Must provide `prompt_attention_mask` when specifying `prompt_embeds`.")
+            raise ValueError(
+                "Must provide `prompt_attention_mask` when specifying `prompt_embeds`."
+            )
 
-        if negative_prompt_embeds is not None and negative_prompt_attention_mask is None:
-            raise ValueError("Must provide `negative_prompt_attention_mask` when specifying `negative_prompt_embeds`.")
+        if (
+            negative_prompt_embeds is not None
+            and negative_prompt_attention_mask is None
+        ):
+            raise ValueError(
+                "Must provide `negative_prompt_attention_mask` when specifying `negative_prompt_embeds`."
+            )
 
         if prompt_embeds is not None and negative_prompt_embeds is not None:
             if prompt_embeds.shape != negative_prompt_embeds.shape:
@@ -426,7 +481,9 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
                 )
 
     @staticmethod
-    def _pack_latents(latents: torch.Tensor, patch_size: int = 1, patch_size_t: int = 1) -> torch.Tensor:
+    def _pack_latents(
+        latents: torch.Tensor, patch_size: int = 1, patch_size_t: int = 1
+    ) -> torch.Tensor:
         # Unpacked latents of shape are [B, C, F, H, W] are patched into tokens of shape [B, C, F // p_t, p_t, H // p, p, W // p, p].
         # The patch dimensions are then permuted and collapsed into the channel dimension of shape:
         # [B, F // p_t * H // p * W // p, C * p_t * p * p] (an ndim=3 tensor).
@@ -450,32 +507,61 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
 
     @staticmethod
     def _unpack_latents(
-        latents: torch.Tensor, num_frames: int, height: int, width: int, patch_size: int = 1, patch_size_t: int = 1
+        latents: torch.Tensor,
+        num_frames: int,
+        height: int,
+        width: int,
+        patch_size: int = 1,
+        patch_size_t: int = 1,
     ) -> torch.Tensor:
         # Packed latents of shape [B, S, D] (S is the effective video sequence length, D is the effective feature dimensions)
         # are unpacked and reshaped into a video tensor of shape [B, C, F, H, W]. This is the inverse operation of
         # what happens in the `_pack_latents` method.
         batch_size = latents.size(0)
-        latents = latents.reshape(batch_size, num_frames, height, width, -1, patch_size_t, patch_size, patch_size)
-        latents = latents.permute(0, 4, 1, 5, 2, 6, 3, 7).flatten(6, 7).flatten(4, 5).flatten(2, 3)
+        latents = latents.reshape(
+            batch_size,
+            num_frames,
+            height,
+            width,
+            -1,
+            patch_size_t,
+            patch_size,
+            patch_size,
+        )
+        latents = (
+            latents.permute(0, 4, 1, 5, 2, 6, 3, 7)
+            .flatten(6, 7)
+            .flatten(4, 5)
+            .flatten(2, 3)
+        )
         return latents
 
     @staticmethod
     def _normalize_latents(
-        latents: torch.Tensor, latents_mean: torch.Tensor, latents_std: torch.Tensor, scaling_factor: float = 1.0
+        latents: torch.Tensor,
+        latents_mean: torch.Tensor,
+        latents_std: torch.Tensor,
+        scaling_factor: float = 1.0,
     ) -> torch.Tensor:
         # Normalize latents across the channel dimension [B, C, F, H, W]
-        latents_mean = latents_mean.view(1, -1, 1, 1, 1).to(latents.device, latents.dtype)
+        latents_mean = latents_mean.view(1, -1, 1, 1, 1).to(
+            latents.device, latents.dtype
+        )
         latents_std = latents_std.view(1, -1, 1, 1, 1).to(latents.device, latents.dtype)
         latents = (latents - latents_mean) * scaling_factor / latents_std
         return latents
 
     @staticmethod
     def _denormalize_latents(
-        latents: torch.Tensor, latents_mean: torch.Tensor, latents_std: torch.Tensor, scaling_factor: float = 1.0
+        latents: torch.Tensor,
+        latents_mean: torch.Tensor,
+        latents_std: torch.Tensor,
+        scaling_factor: float = 1.0,
     ) -> torch.Tensor:
         # Denormalize latents across the channel dimension [B, C, F, H, W]
-        latents_mean = latents_mean.view(1, -1, 1, 1, 1).to(latents.device, latents.dtype)
+        latents_mean = latents_mean.view(1, -1, 1, 1, 1).to(
+            latents.device, latents.dtype
+        )
         latents_std = latents_std.view(1, -1, 1, 1, 1).to(latents.device, latents.dtype)
         latents = latents * latents_std / scaling_factor + latents_mean
         return latents
@@ -509,7 +595,9 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
 
         latents = randn_tensor(shape, generator=generator, device=device, dtype=dtype)
         latents = self._pack_latents(
-            latents, self.transformer_spatial_patch_size, self.transformer_temporal_patch_size
+            latents,
+            self.transformer_spatial_patch_size,
+            self.transformer_temporal_patch_size,
         )
         return latents
 
@@ -705,7 +793,9 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
         )
         if self.do_classifier_free_guidance:
             prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds], dim=0)
-            prompt_attention_mask = torch.cat([negative_prompt_attention_mask, prompt_attention_mask], dim=0)
+            prompt_attention_mask = torch.cat(
+                [negative_prompt_attention_mask, prompt_attention_mask], dim=0
+            )
 
         # 4. Prepare latent variables
         num_channels_latents = self.transformer.config.in_channels
@@ -742,7 +832,9 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
             sigmas=sigmas,
             mu=mu,
         )
-        num_warmup_steps = max(len(timesteps) - num_inference_steps * self.scheduler.order, 0)
+        num_warmup_steps = max(
+            len(timesteps) - num_inference_steps * self.scheduler.order, 0
+        )
         self._num_timesteps = len(timesteps)
 
         # 6. Prepare micro-conditions
@@ -753,18 +845,19 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
         )
 
         if self.caching_timestep_interval:
-            caching_timesteps = timesteps.tolist()[::self.caching_timestep_interval] 
+            caching_timesteps = timesteps.tolist()[:: self.caching_timestep_interval]
             caching_timesteps = [int(t) for t in caching_timesteps]
         else:
             caching_timesteps = None
-        
 
         if (self.caching_layers is not None) and (caching_timesteps is not None):
-            activation_cache = hooks.LayerActivations(output_dir="/users/jamullik/scratch/LTX-Video/activations")
+            activation_cache = hooks.LayerActivations(
+                output_dir="/users/jamullik/scratch/LTX-Video/activations"
+            )
             activation_cache.register(
                 self.transformer,
                 layer_names=self.caching_layers,
-                timesteps=caching_timesteps
+                timesteps=caching_timesteps,
             )
 
         # 7. Denoising loop
@@ -777,7 +870,11 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
 
                 activation_cache.set_timestep(int(t))
 
-                latent_model_input = torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents
+                latent_model_input = (
+                    torch.cat([latents] * 2)
+                    if self.do_classifier_free_guidance
+                    else latents
+                )
                 latent_model_input = latent_model_input.to(prompt_embeds.dtype)
 
                 # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
@@ -799,16 +896,22 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
 
                 if self.do_classifier_free_guidance:
                     noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                    noise_pred = noise_pred_uncond + self.guidance_scale * (noise_pred_text - noise_pred_uncond)
+                    noise_pred = noise_pred_uncond + self.guidance_scale * (
+                        noise_pred_text - noise_pred_uncond
+                    )
 
                     if self.guidance_rescale > 0:
                         # Based on 3.4. in https://arxiv.org/pdf/2305.08891.pdf
                         noise_pred = rescale_noise_cfg(
-                            noise_pred, noise_pred_text, guidance_rescale=self.guidance_rescale
+                            noise_pred,
+                            noise_pred_text,
+                            guidance_rescale=self.guidance_rescale,
                         )
 
                 # compute the previous noisy sample x_t -> x_t-1
-                latents = self.scheduler.step(noise_pred, t, latents, return_dict=False)[0]
+                latents = self.scheduler.step(
+                    noise_pred, t, latents, return_dict=False
+                )[0]
 
                 if callback_on_step_end is not None:
                     callback_kwargs = {}
@@ -820,7 +923,9 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
                     prompt_embeds = callback_outputs.pop("prompt_embeds", prompt_embeds)
 
                 # call the callback, if provided
-                if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
+                if i == len(timesteps) - 1 or (
+                    (i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0
+                ):
                     progress_bar.update()
 
                 if XLA_AVAILABLE:
@@ -838,14 +943,22 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
                 self.transformer_temporal_patch_size,
             )
             latents = self._denormalize_latents(
-                latents, self.vae.latents_mean, self.vae.latents_std, self.vae.config.scaling_factor
+                latents,
+                self.vae.latents_mean,
+                self.vae.latents_std,
+                self.vae.config.scaling_factor,
             )
             latents = latents.to(prompt_embeds.dtype)
 
             if not self.vae.config.timestep_conditioning:
                 timestep = None
             else:
-                noise = randn_tensor(latents.shape, generator=generator, device=device, dtype=latents.dtype)
+                noise = randn_tensor(
+                    latents.shape,
+                    generator=generator,
+                    device=device,
+                    dtype=latents.dtype,
+                )
                 if not isinstance(decode_timestep, list):
                     decode_timestep = [decode_timestep] * batch_size
                 if decode_noise_scale is None:
@@ -853,15 +966,21 @@ class LTXPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraLoaderMixi
                 elif not isinstance(decode_noise_scale, list):
                     decode_noise_scale = [decode_noise_scale] * batch_size
 
-                timestep = torch.tensor(decode_timestep, device=device, dtype=latents.dtype)
-                decode_noise_scale = torch.tensor(decode_noise_scale, device=device, dtype=latents.dtype)[
-                    :, None, None, None, None
-                ]
-                latents = (1 - decode_noise_scale) * latents + decode_noise_scale * noise
+                timestep = torch.tensor(
+                    decode_timestep, device=device, dtype=latents.dtype
+                )
+                decode_noise_scale = torch.tensor(
+                    decode_noise_scale, device=device, dtype=latents.dtype
+                )[:, None, None, None, None]
+                latents = (
+                    1 - decode_noise_scale
+                ) * latents + decode_noise_scale * noise
 
             latents = latents.to(self.vae.dtype)
             video = self.vae.decode(latents, timestep, return_dict=False)[0]
-            video = self.video_processor.postprocess_video(video, output_type=output_type)
+            video = self.video_processor.postprocess_video(
+                video, output_type=output_type
+            )
 
         # Offload all models
         self.maybe_free_model_hooks()
