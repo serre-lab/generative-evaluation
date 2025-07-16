@@ -66,7 +66,7 @@ def main(args):
 
             # forward process
             noise = torch.randn_like(latent)
-            t_max = torch.tensor([501], device=latent.device)
+            t_max = torch.tensor([801], device=latent.device)
             noised_latent = pipe.scheduler.add_noise(latent, noise, t_max)
 
             # backward process
@@ -74,14 +74,15 @@ def main(args):
             denoised = pipe.truncated(
                 noised_latents=noised_latent,
                 start_t=t_max,
-                prompt=[model_config["default-prompt"]] *  noised_latent.shape[0],
+                prompt=[model_config["default-prompt"]] * noised_latent.shape[0],
                 batch_id=i,
             )
 
             for j, im in enumerate(denoised.images):
                 im.save(f"outputs/images/denoised_{i}_{j}.png")
 
-            if i >= 10: break
+            if i >= 10:
+                break
 
         torch.cuda.empty_cache()
 

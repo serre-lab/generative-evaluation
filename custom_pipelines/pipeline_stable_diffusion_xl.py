@@ -1259,6 +1259,7 @@ class StableDiffusionXLPipeline(
         timesteps, num_inference_steps = retrieve_timesteps(
             self.scheduler, num_inference_steps, device, timesteps, sigmas
         )
+        print(timesteps)
 
         # 5. Prepare latent variables
         num_channels_latents = self.unet.config.in_channels
@@ -1531,7 +1532,7 @@ class StableDiffusionXLPipeline(
             return (image,)
 
         return StableDiffusionXLPipelineOutput(images=image)
-    
+
     @torch.no_grad()
     @replace_example_docstring(EXAMPLE_DOC_STRING)
     def truncated(
@@ -1579,6 +1580,9 @@ class StableDiffusionXLPipeline(
         ] = None,
         callback_on_step_end_tensor_inputs: List[str] = ["latents"],
         batch_id: int = 0,
+        rep_id: int = 0,
+        model_name: str = "sdxl",
+        dataset_name: str = "imagenet",
         **kwargs,
     ):
         r"""
@@ -1839,7 +1843,6 @@ class StableDiffusionXLPipeline(
         # )
         latents = noised_latents.to(device=device, dtype=prompt_embeds.dtype)
 
-
         # 6. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
         extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
 
@@ -1849,14 +1852,15 @@ class StableDiffusionXLPipeline(
             caching_timesteps = [int(t) for t in caching_timesteps]
         else:
             caching_timesteps = None
-        
+
         print(f"[DEBUG] Caching layers: {self.caching_layers}")
         print(f"[DEBUG] Caching timesteps: {caching_timesteps}")
 
         if (self.caching_layers is not None) and (caching_timesteps is not None):
             activation_cache = LayerActivations(
                 output_dir="/users/jamullik/scratch/generative-evaluation/outputs/activations",
-                model_name='sdxl'
+                model_name=model_name,
+                dataset_name=dataset_name,
             )
             activation_cache.register(
                 self.unet, layer_names=self.caching_layers, timesteps=caching_timesteps
@@ -1947,6 +1951,7 @@ class StableDiffusionXLPipeline(
         self._num_timesteps = len(timesteps)
         print(f"[DEBUG] Timesteps: {timesteps}")
         activation_cache.set_batch(batch_id)
+        activation_cache.set_rep(rep_id)
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
                 if self.interrupt:

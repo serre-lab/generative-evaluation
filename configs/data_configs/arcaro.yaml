@@ -1,0 +1,5 @@
+dataset: arcaro
+type: neural
+paths:
+  root: /users/jamullik/scratch/Visual_Alignment/datasets/Arcaro2020
+monkey: Red

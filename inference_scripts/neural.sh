@@ -11,4 +11,4 @@
 
 export PYTHONPATH=/users/jamullik/scratch/generative-evaluation:$PYTHONPATH
 export HF_HOME=/users/jamullik/scratch/.cache/huggingface/hub
-./env/bin/python experiments/imagenet_noising.py --model sdxl --dataset imagenet
+./env/bin/python experiments/neural_eval.py --model sdxl --dataset arcaro --t_max 501 --n_reps 4

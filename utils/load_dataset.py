@@ -1,6 +1,8 @@
 import torch
 from torchvision import datasets, transforms
 
+from utils.datasets import ArcaroDataset
+
 
 def load_dataset(config):
     """
@@ -17,7 +19,12 @@ def load_dataset(config):
         # train_set = datasets.ImageNet(root=config['paths']['root'], split='train')
         val_set = datasets.ImageFolder(root=config["paths"]["val"])
         return val_set
-
+    if config["dataset"] == "arcaro":
+        dataset = ArcaroDataset(
+            root=config["paths"]["root"],
+            monkey=config.get("monkey", "Red"),
+        )
+        return dataset
     else:
         raise ValueError(f"Unsupported dataset: {config['dataset']}")
 
@@ -34,11 +41,13 @@ def resolve_transform(model_config):
     """
 
     resize = transforms.Resize(
-        (model_config["image-size"]["height"], model_config["image-size"]["width"]),
+        model_config["image-size"]["height"],
         transforms.InterpolationMode.BICUBIC,
     )
     crop = (
-        transforms.CenterCrop((224, 224))
+        transforms.CenterCrop(
+            (model_config["image-size"]["height"], model_config["image-size"]["width"])
+        )
         if model_config.get("center-crop", False)
         else transforms.Lambda(lambda x: x)
     )
@@ -48,5 +57,5 @@ def resolve_transform(model_config):
         std=model_config.get("normalize", {}).get("std", [0.5, 0.5, 0.5]),
     )
 
-    transform = transforms.Compose([crop, resize, transforms.ToTensor(), normalize])
+    transform = transforms.Compose([resize, transforms.ToTensor(), normalize])
     return transform

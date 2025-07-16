@@ -3,12 +3,14 @@ import torch
 
 
 class LayerActivations:
-    def __init__(self, output_dir: str, model_name: str):
+    def __init__(self, output_dir: str, model_name: str, dataset_name: str):
         self.hooks = []
         self._active = False
         self._current_timestep = None
         self._current_batch = None
+        self._current_rep = None
         self.model_name = model_name
+        self.dataset_name = dataset_name
         self.activations = {}  # {timestep: {layer_name: [activations]}}
         self.output_dir = output_dir
 
@@ -22,6 +24,11 @@ class LayerActivations:
         """Set the current batch number for logging."""
         print("Setting current batch to:", batch)
         self._current_batch = batch
+
+    def set_rep(self, rep):
+        """Set the current repetition number for logging."""
+        print("Setting current repetition to:", rep)
+        self._current_rep = rep
 
     def _get_hook(self, layer_name, timesteps, debug=True):
         (
@@ -106,10 +113,9 @@ class LayerActivations:
             for layer_name, activations in self.activations[timestep].items():
                 # Convert list of tensors to a single tensor
                 if activations:
+                    print(f"IND ACTIVATION SHAPE: {activations[0].shape}")
                     tensor = torch.stack(activations)
-                    file_path = (
-                        f"{self.output_dir}/{self.model_name}/{layer_name}/{timestep}/{self._current_batch}.pt"
-                    )
+                    file_path = f"{self.output_dir}/{self.dataset_name}/{self.model_name}/{layer_name}/{timestep}/batch_{self._current_batch}_rep_{self._current_rep}.pt"
                     os.makedirs(os.path.dirname(file_path), exist_ok=True)
                     torch.save(tensor, file_path)
 

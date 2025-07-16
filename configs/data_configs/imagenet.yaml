@@ -1,4 +1,5 @@
 dataset: imagenet
+type: image
 paths:
   root: /users/jamullik/scratch/imagenet
   train: /users/jamullik/scratch/imagenet/train
